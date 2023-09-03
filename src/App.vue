@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import ProductItem from "./components/ProductItem/ProductItem.vue";
+import ActionAndFilters from "./components/ActionAndFilters.vue";
 
 interface Product {
     id: number;
@@ -40,16 +41,80 @@ const products = ref<Product[]>([
         imageUrl: "/images/t-shirt2.jpg",
     },
 ]);
+
+type SortDirections = "asc" | "desc" | "";
+
+interface SortAndFilter {
+    price: SortDirections;
+    name: SortDirections;
+    inStock: boolean | null;
+}
+
+const sortAndFilter: SortAndFilter = reactive({
+    price: "",
+    name: "",
+    inStock: null,
+});
+
+const productResult = computed(() => {
+    return products.value
+        .filter((p) =>
+            sortAndFilter.inStock === null
+                ? true
+                : p.inStock === sortAndFilter.inStock
+        )
+        .sort((a, b) => {
+            if (sortAndFilter.price) {
+                return sortAndFilter.price === "asc"
+                    ? a.price - b.price
+                    : b.price - a.price;
+            }
+            if (sortAndFilter.name) {
+                return sortAndFilter.name === "asc"
+                    ? a.title.localeCompare(b.title)
+                    : b.title.localeCompare(a.title);
+            }
+            return 0;
+        });
+});
+
+const handleSortByPrice = () => {
+    if (sortAndFilter.price === "asc") {
+        sortAndFilter.price = "desc";
+    } else {
+        sortAndFilter.price = "asc";
+    }
+    sortAndFilter.name = "";
+};
+
+const handleSortByName = () => {
+    if (sortAndFilter.name === "asc") {
+        sortAndFilter.name = "desc";
+    } else {
+        sortAndFilter.name = "asc";
+    }
+    sortAndFilter.price = "";
+};
+
+const handleFilterByStock = (inStock: boolean | null) => {
+    sortAndFilter.inStock = inStock;
+};
 </script>
 
 <template>
     <main>
         <h1>Jack's store</h1>
+        <ActionAndFilters
+            @sort-by-price="handleSortByPrice"
+            @sort-by-name="handleSortByName"
+            @filter-by-stock="handleFilterByStock"
+        />
         <div class="productList">
             <ProductItem
-                v-for="product in products"
+                v-for="product in productResult"
                 :key="product.id"
                 v-bind="product"
+                class="product"
             >
             </ProductItem>
         </div>
